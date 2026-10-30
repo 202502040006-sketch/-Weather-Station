@@ -74,7 +74,7 @@ app.get("/weather/now", async (req, res) => {
 });
 
 // Connect to local MongoDB
-mongoose.connect("mongodb://127.0.0.1:27017/wss")
+mongoose.connect(process.env.MONGODB_URI)
     .then(() => {
 
         console.log("MongoDB Compass connected successfully");
