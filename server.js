@@ -1,93 +1,44 @@
-require("dotenv").config();
-
-const express = require("express");
-const mongoose = require("mongoose");
-const path = require("path");
+const express = require('express');
+const path = require('path');
+const mongoose = require('mongoose');
 
 const app = express();
 
-// Middleware
+// Render gives you the port through process.env.PORT
+const PORT = process.env.PORT || 3000;
+
+// Put your MongoDB Atlas connection string in Render > Environment as MONGO_URI
+// (the fallback is only for running on your own PC)
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/weatherstation';
+
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
 
-// Weather database schema
-const weatherSchema = new mongoose.Schema({
-    city: {
-        type: String,
-        required: true
-    },
-    temperature: Number,
-    humidity: Number,
-    status: String,
-    wind: Number,
-    timestamp: {
-        type: Date,
-        default: Date.now
-    }
+// ---------- Frontend files (all sit in the repo root) ----------
+// Only these three files are public. server.js and package.json stay private.
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Create Weather model
-const Weather = mongoose.model("Weather", weatherSchema);
-
-// Display website
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "index.html"));
+app.get('/style.css', (req, res) => {
+  res.sendFile(path.join(__dirname, 'style.css'));
 });
 
-// Save weather data to MongoDB
-app.post("/weather/update", async (req, res) => {
-    try {
-        const report = await Weather.create(req.body);
-
-        res.status(201).json({
-            message: "Weather data saved successfully",
-            data: report
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            message: "Could not save weather data",
-            error: error.message
-        });
-    }
+app.get('/script.js', (req, res) => {
+  res.sendFile(path.join(__dirname, 'script.js'));
 });
 
-// Get latest weather data
-app.get("/weather/now", async (req, res) => {
-    try {
-        const latest = await Weather.findOne()
-            .sort({ timestamp: -1 });
-
-        if (!latest) {
-            return res.status(404).json({
-                message: "No weather data available"
-            });
-        }
-
-        res.json(latest);
-
-    } catch (error) {
-        res.status(500).json({
-            error: error.message
-        });
-    }
+// ---------- Your API routes go here ----------
+// Example health check, handy for testing on Render
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
 });
 
-// Connect to local MongoDB
-mongoose.connect(process.env.MONGODB_URI)
-    .then(() => {
+// ---------- Database + server start ----------
+mongoose
+  .connect(MONGO_URI)
+  .then(() => console.log('MongoDB connected successfully'))
+  .catch((err) => console.error('MongoDB connection error:', err.message));
 
-        console.log("MongoDB Compass connected successfully");
-
-        const PORT = 3000;
-
-        app.listen(PORT, () => {
-            console.log(`Server running at http://localhost:${PORT}`);
-        });
-
-    })
-    .catch((error) => {
-
-        console.log("MongoDB connection error:", error.message);
-
-    });
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
